@@ -148,7 +148,8 @@ export default createRule<[], MessageIds>({
     schema: [],
     fixable: "code",
     messages: {
-      forbiddenClass: 'Class "{{className}}" is forbidden: {{reason}}',
+      forbiddenClass:
+        'Class "{{className}}" is forbidden: {{reason}}{{replacementMsg}}',
     },
   },
   defaultOptions: [],
@@ -168,13 +169,14 @@ export default createRule<[], MessageIds>({
     ) {
       const base = getBaseClassName(className);
       const { reason, replacement } = getForbiddenClassInfo(base);
+      const replacementMsg = replacement ? ` → replace with "${replacement}"` : "";
 
       if (!reason) return;
 
       context.report({
         node,
         messageId: "forbiddenClass",
-        data: { className, reason },
+        data: { className, reason, replacementMsg },
         fix:
           replacement && fixerTarget
             ? (fixer) => {
