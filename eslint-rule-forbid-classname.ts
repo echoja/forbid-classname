@@ -6,7 +6,7 @@ const createRule = ESLintUtils.RuleCreator(
   () => "https://example.com/forbid-classname"
 );
 
-// ✅ 금지 클래스 목록 (fix 불가능 포함)
+/** 금지 클래스 목록 (fix 불가능 포함)  */
 const forbiddenClasses: { classNames: string[]; reason: string }[] = [
   {
     classNames: ["do-not-use-this", "legacy-ui", "forbidden-class"],
@@ -18,13 +18,12 @@ const forbiddenClasses: { classNames: string[]; reason: string }[] = [
   },
 ];
 
-// ✅ fix 가능한 클래스는 Map으로 관리
+/** fix 가능한 클래스는 Map으로 관리  */
 const classNameReplacements = new Map<string, string>([
   ["forbidden-class", "recommended-class"],
   ["text-red-500", "text-error"],
 ]);
 
-// 🔍 금지 클래스인지 확인
 function getForbiddenReason(cls: string): string | undefined {
   for (const group of forbiddenClasses) {
     if (group.classNames.includes(cls)) {
@@ -34,7 +33,6 @@ function getForbiddenReason(cls: string): string | undefined {
   return undefined;
 }
 
-// 🧼 class string 추출
 function extractClassNamesFromArg(arg: TSESTree.Expression): string[] {
   const classNames: string[] = [];
 
@@ -86,27 +84,27 @@ export default createRule<[], MessageIds>({
   create(context) {
     const { sourceCode } = context;
 
-    function reportClass(
-      cls: string,
+    function report(
+      className: string,
       node: TSESTree.Node,
       fixerTarget: TSESTree.Literal | null
     ) {
-      const replacement = classNameReplacements.get(cls);
-      const reason = getForbiddenReason(cls);
+      const replacement = classNameReplacements.get(className);
+      const reason = getForbiddenReason(className);
 
       if (!reason) return;
 
       context.report({
         node,
         messageId: "forbiddenClass",
-        data: { className: cls, reason },
+        data: { className, reason },
         fix:
           replacement && fixerTarget
             ? (fixer) => {
                 const original = fixerTarget.value as string;
                 const fixed = original
                   .split(/\s+/)
-                  .map((c) => (c === cls ? replacement : c))
+                  .map((c) => (c === className ? replacement : c))
                   .join(" ");
                 return fixer.replaceText(fixerTarget, `"${fixed}"`);
               }
@@ -122,9 +120,9 @@ export default createRule<[], MessageIds>({
           typeof node.value.value === "string"
         ) {
           const classList = node.value.value.split(/\s+/);
-          for (const cls of classList) {
-            if (classNameReplacements.has(cls) || getForbiddenReason(cls)) {
-              reportClass(cls, node, node.value);
+          for (const className of classList) {
+            if (classNameReplacements.has(className) || getForbiddenReason(className)) {
+              report(className, node, node.value);
             }
           }
         }
@@ -136,16 +134,15 @@ export default createRule<[], MessageIds>({
           node.parent?.type !== "JSXAttribute"
         ) {
           const comments = sourceCode.getCommentsBefore(node);
-          console.log("Comments before node:", comments);
           const hasClassComment = comments.some(
             (c) => c.value.trim() === "className"
           );
 
           if (hasClassComment) {
             const classList = node.value.split(/\s+/);
-            for (const cls of classList) {
-              if (classNameReplacements.has(cls) || getForbiddenReason(cls)) {
-                reportClass(cls, node, node);
+            for (const className of classList) {
+              if (classNameReplacements.has(className) || getForbiddenReason(className)) {
+                report(className, node, node);
               }
             }
           }
@@ -160,18 +157,18 @@ export default createRule<[], MessageIds>({
           for (const arg of node.arguments) {
             if (arg.type === "Literal" && typeof arg.value === "string") {
               const classList = arg.value.split(/\s+/);
-              for (const cls of classList) {
-                if (classNameReplacements.has(cls) || getForbiddenReason(cls)) {
-                  reportClass(cls, arg, arg);
+              for (const className of classList) {
+                if (classNameReplacements.has(className) || getForbiddenReason(className)) {
+                  report(className, arg, arg);
                 }
               }
             } else {
               const classList = extractClassNamesFromArg(
                 arg as TSESTree.Expression
               );
-              for (const cls of classList) {
-                if (classNameReplacements.has(cls) || getForbiddenReason(cls)) {
-                  reportClass(cls, arg, null); // fix 불가
+              for (const className of classList) {
+                if (classNameReplacements.has(className) || getForbiddenReason(className)) {
+                  report(className, arg, null); // fix 불가
                 }
               }
             }
