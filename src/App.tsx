@@ -1,6 +1,3 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
 
 function cn(...classes: (string | undefined)[]) {
@@ -8,12 +5,7 @@ function cn(...classes: (string | undefined)[]) {
 }
 
 function App() {
-  const [count, setCount] = useState(0);
-
-  console.log(
-    /* className */ "do-not-use-this another another-class yet-another-class forbidden-class another"
-  );
-
+  console.log(/* className */ "do-not-use-this forbidden-class another");
 
   cn(
     "do-not-use-this another",
@@ -24,30 +16,11 @@ function App() {
   );
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="do-not-use-this"></div>
-      <div className="forbidden-class"></div>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div>
+      <div className="do-not-use-this">abc</div>
+      <div className="forbidden-class">def</div>
+      <div className={cn("sm:forbidden-class", "yet-another-class")}>ghi</div>
+    </div>
   );
 }
 
