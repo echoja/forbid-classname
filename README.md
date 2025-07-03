@@ -27,7 +27,7 @@
     ```
     이 명령은 Vite 개발 서버를 시작하여 `src/App.tsx`에 있는 예제 React 애플리케이션을 볼 수 있습니다.
 
-## 🛠️ `forbid-classname` 규칙 사용하기
+## `forbid-classname` 규칙 사용하기
 
 `forbid-classname` 규칙은 `eslint-rule-forbid-classname.ts` 파일에 정의되어 있습니다. 이 규칙은 특정 CSS 클래스 이름의 사용을 금지하고, 가능한 경우 자동으로 수정(fix)을 제공합니다.
 
