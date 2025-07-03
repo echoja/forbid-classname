@@ -6,6 +6,29 @@ const createRule = ESLintUtils.RuleCreator(
   () => "https://example.com/forbid-classname"
 );
 
+/**
+ * 금지된 클래스 이름을 교체합니다.
+ * @param token - 클래스 이름 토큰
+ * @returns 교체된 클래스 이름 토큰
+ */
+function replaceForbiddenClassInToken(token: string): string {
+  const parts = token.split(":");
+  const base = parts[parts.length - 1];
+  const replacement = classNameReplacements.get(base);
+  if (!replacement) return token;
+
+  parts[parts.length - 1] = replacement;
+  return parts.join(":");
+}
+
+/**
+ * 주어진 클래스 이름에서 기본 클래스 이름을 추출합니다. (예: "sm:text-red-500" -> "text-red-500")
+ */
+function getBaseClassName(className: string): string {
+  const parts = className.split(":");
+  return parts[parts.length - 1];
+}
+
 /** 금지 클래스 목록 (fix 불가능 포함)  */
 const forbiddenClasses: { classNames: string[]; reason: string }[] = [
   {
@@ -29,7 +52,10 @@ const classNameReplacements = new Map<string, string>([
  * @param cls - 확인할 클래스 이름
  * @returns 금지 이유와 교체 클래스 이름 (있는 경우)
  */
-function getForbiddenClassInfo(cls: string): { reason?: string; replacement?: string } {
+function getForbiddenClassInfo(cls: string): {
+  reason?: string;
+  replacement?: string;
+} {
   let reason: string | undefined;
   for (const group of forbiddenClasses) {
     if (group.classNames.includes(cls)) {
@@ -73,11 +99,17 @@ function extractFromArrayExpression(node: TSESTree.ArrayExpression): string[] {
  * @param node - 객체 표현식 AST 노드
  * @returns 추출된 클래스 이름 목록
  */
-function extractFromObjectExpression(node: TSESTree.ObjectExpression): string[] {
+function extractFromObjectExpression(
+  node: TSESTree.ObjectExpression
+): string[] {
   const names: string[] = [];
   for (const prop of node.properties) {
     if (prop.type === "Property") {
-      if (!prop.computed && prop.key.type === "Literal" && typeof prop.key.value === "string") {
+      if (
+        !prop.computed &&
+        prop.key.type === "Literal" &&
+        typeof prop.key.value === "string"
+      ) {
         names.push(...prop.key.value.split(/\s+/).filter(Boolean));
       } else if (prop.key.type === "Identifier") {
         names.push(prop.key.name);
@@ -134,9 +166,10 @@ export default createRule<[], MessageIds>({
       node: TSESTree.Node,
       fixerTarget: TSESTree.Literal | null
     ) {
-      const { reason, replacement } = getForbiddenClassInfo(className);
+      const base = getBaseClassName(className);
+      const { reason, replacement } = getForbiddenClassInfo(base);
 
-      if (!reason) return; // 이유가 없으면 보고하지 않음
+      if (!reason) return;
 
       context.report({
         node,
@@ -148,7 +181,12 @@ export default createRule<[], MessageIds>({
                 const original = fixerTarget.value as string;
                 const fixed = original
                   .split(/\s+/)
-                  .map((c) => (c === className ? replacement : c))
+                  .map((token) => {
+                    const tokenBase = getBaseClassName(token);
+                    return tokenBase === base
+                      ? replaceForbiddenClassInToken(token)
+                      : token;
+                  })
                   .join(" ");
                 return fixer.replaceText(fixerTarget, `"${fixed}"`);
               }
@@ -168,13 +206,13 @@ export default createRule<[], MessageIds>({
       fixerTarget: TSESTree.Literal | null
     ) {
       for (const className of classList) {
-        const { reason, replacement } = getForbiddenClassInfo(className);
-        if (reason || replacement) { // reason 또는 replacement가 있으면 보고
+        const base = getBaseClassName(className);
+        const { reason, replacement } = getForbiddenClassInfo(base);
+        if (reason || replacement) {
           report(className, node, fixerTarget);
         }
       }
     }
-
     return {
       /**
        * JSXAttribute 노드를 방문하여 className 속성을 검사합니다.
@@ -227,7 +265,9 @@ export default createRule<[], MessageIds>({
               checkAndReportClassNames(classList, arg, arg);
             } else {
               // Literal이 아닌 다른 타입의 인자 (예: ArrayExpression, ObjectExpression)
-              const classList = extractClassNamesFromArg(arg as TSESTree.Expression);
+              const classList = extractClassNamesFromArg(
+                arg as TSESTree.Expression
+              );
               checkAndReportClassNames(classList, arg, null); // fix 불가
             }
           }
